@@ -1,7 +1,7 @@
 {
   "name": "cordova-plugin-statusbar",
-  "version": "3.0.0",
-  "description": "Cordova StatusBar Plugin",
+  "version": "3.0.0-anz.1",
+  "description": "ANZ fork of Apache cordova-plugin-statusbar 3.0.0 — iOS 27 status-bar frame + theme strip",
   "types": "./types/index.d.ts",
   "cordova": {
     "id": "cordova-plugin-statusbar",
@@ -11,11 +11,16 @@
       "windows"
     ]
   },
-  "repository": "github:apache/cordova-plugin-statusbar",
-  "bugs": "https://github.com/apache/cordova-plugin-statusbar/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eastxing/cordova-plugin-statusbar.git"
+  },
+  "bugs": "https://github.com/eastxing/cordova-plugin-statusbar/issues",
+  "homepage": "https://github.com/eastxing/cordova-plugin-statusbar#readme",
   "keywords": [
     "cordova",
     "statusbar",
+    "anz",
     "ecosystem:cordova",
     "cordova-android",
     "cordova-ios",
@@ -35,7 +40,7 @@
       }
     }
   },
-  "author": "Apache Software Foundation",
+  "author": "anzsoft (fork of Apache Software Foundation cordova-plugin-statusbar 3.0.0)",
   "license": "Apache-2.0",
   "devDependencies": {
     "@cordova/eslint-config": "^4.0.0"

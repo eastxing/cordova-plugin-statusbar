@@ -21,11 +21,11 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-statusbar"
-    version="3.0.0">
+    version="3.0.0-anz.1">
     <name>StatusBar</name>
-    <description>Cordova StatusBar Plugin</description>
+    <description>ANZ fork of cordova-plugin-statusbar 3.0.0 (iOS 27 frame + theme strip)</description>
     <license>Apache 2.0</license>
-    <keywords>cordova,statusbar</keywords>
+    <keywords>cordova,statusbar,anz</keywords>
 
     <engines>
             <engine name="cordova" version=">=3.0.0" />

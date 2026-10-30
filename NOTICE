@@ -1,5 +1,12 @@
-Apache Cordova
-Copyright 2012 The Apache Software Foundation
+Apache Cordova StatusBar Plugin
+Copyright 2012-2023 The Apache Software Foundation
 
 This product includes software developed at
-The Apache Software Foundation (http://www.apache.org/).
+The Apache Software Foundation (https://www.apache.org/).
+
+------------------------------------------------------------------------
+ANZ fork
+------------------------------------------------------------------------
+Version 3.0.0-anz.1 is a fork of Apache cordova-plugin-statusbar 3.0.0
+(https://github.com/eastxing/cordova-plugin-statusbar, branch anz-3.0.0).
+See ANZ_PATCH.md. Upstream: https://github.com/apache/cordova-plugin-statusbar

@@ -20,6 +20,14 @@
 -->
 # Release Notes
 
+### 3.0.0-anz.1
+
+ANZ fork of 3.0.0. See [ANZ_PATCH.md](./ANZ_PATCH.md).
+
+* iOS: resolve status-bar height via `UIStatusBarManager` + `safeAreaInsets.top` (iOS 27 Dynamic Island)
+* iOS: keep theme-colored status-bar strip in sync when WebView is inset
+* iOS: `[ANZ-SB]` logs for overlays transition, background color, and `_ready` pref race
+
 ### 3.0.0 (Nov 25, 2021)
 
 * [GH-224](https://github.com/apache/cordova-plugin-statusbar/pull/224) fix: update engines for working on 3.0.0

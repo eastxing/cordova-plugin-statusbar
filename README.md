@@ -21,21 +21,28 @@ description: Control the device status bar.
 #         under the License.
 -->
 
-# cordova-plugin-statusbar
+# cordova-plugin-statusbar **3.0.0-anz.1**
+
+> **ANZ fork** of Apache `cordova-plugin-statusbar` **3.0.0**.
+> GitHub: [eastxing/cordova-plugin-statusbar](https://github.com/eastxing/cordova-plugin-statusbar) (`anz-3.0.0` / tag `3.0.0-anz.1`).
+> Do **not** install this repo’s `master` (Apache 4.x) or npm `3.0.0` / `4.0.0` without the ANZ iOS patches.
+> Details: [ANZ_PATCH.md](./ANZ_PATCH.md).
+
+Upstream API docs below are unchanged.
 
 [![Android Testsuite](https://github.com/apache/cordova-plugin-statusbar/actions/workflows/android.yml/badge.svg)](https://github.com/apache/cordova-plugin-statusbar/actions/workflows/android.yml) [![Chrome Testsuite](https://github.com/apache/cordova-plugin-statusbar/actions/workflows/chrome.yml/badge.svg)](https://github.com/apache/cordova-plugin-statusbar/actions/workflows/chrome.yml) [![iOS Testsuite](https://github.com/apache/cordova-plugin-statusbar/actions/workflows/ios.yml/badge.svg)](https://github.com/apache/cordova-plugin-statusbar/actions/workflows/ios.yml) [![Lint Test](https://github.com/apache/cordova-plugin-statusbar/actions/workflows/lint.yml/badge.svg)](https://github.com/apache/cordova-plugin-statusbar/actions/workflows/lint.yml)
 
 > The `StatusBar` object provides some functions to customize the iOS and Android StatusBar.
 
-## Installation
+## Installation (ANZ fork)
 
-This installation method requires cordova 5.0+
+```bash
+cordova plugin add https://github.com/eastxing/cordova-plugin-statusbar.git#3.0.0-anz.1
+```
+
+Upstream (unpatched):
 
     cordova plugin add cordova-plugin-statusbar
-
-It is also possible to install via repo url directly ( unstable )
-
-    cordova plugin add https://github.com/apache/cordova-plugin-statusbar.git
 
 
 Preferences

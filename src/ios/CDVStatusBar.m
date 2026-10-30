@@ -15,12 +15,9 @@
  KIND, either express or implied.  See the License for the
  specific language governing permissions and limitations
  under the License.
- */
 
-/*
- NOTE: plugman/cordova cli should have already installed this,
- but you need the value UIViewControllerBasedStatusBarAppearance
- in your Info.plist as well to set the styles in iOS 7
+ ANZ: cordova-plugin-statusbar 3.0.0-anz.1 (fork of Apache 3.0.0).
+ See ANZ_PATCH.md. Requires UIViewControllerBasedStatusBarAppearance in Info.plist.
  */
 
 #import "CDVStatusBar.h"
@@ -73,6 +70,8 @@ static const void *kStatusBarStyle = &kStatusBarStyle;
 @interface CDVStatusBar () <UIScrollViewDelegate>
 - (void)fireTappedEvent;
 - (void)updateIsVisible:(BOOL)visible;
+- (CGRect)anz_statusBarFrame;
+- (void)anz_presentStatusBarBackgroundView;
 @end
 
 @implementation CDVStatusBar
@@ -95,6 +94,8 @@ static const void *kStatusBarStyle = &kStatusBarStyle;
     //add a small delay ( 0.1 seconds ) or statusbar size will be wrong
     __weak CDVStatusBar* weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        // Must resize bg strip too — otherwise webView drops and white VC shows through.
+        [weakSelf resizeStatusBarBackgroundView];
         [weakSelf resizeWebView];
     });
 }
@@ -122,7 +123,7 @@ static const void *kStatusBarStyle = &kStatusBarStyle;
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(cordovaViewWillAppear:) name: @"CDVViewWillAppearNotification" object:nil];
 
-    _statusBarOverlaysWebView = YES; // default
+    _statusBarOverlaysWebView = YES; // default — JS overlaysWebView(false) flips to trigger resize
 
     [self initializeStatusBarBackgroundView];
 
@@ -191,26 +192,84 @@ static const void *kStatusBarStyle = &kStatusBarStyle;
     _eventsCallbackId = command.callbackId;
     [self updateIsVisible:![UIApplication sharedApplication].statusBarHidden];
     NSString* setting = @"StatusBarOverlaysWebView";
-    if ([self settingForKey:setting]) {
-        self.statusBarOverlaysWebView = [(NSNumber*)[self settingForKey:setting] boolValue];
+    id settingVal = [self settingForKey:setting];
+    BOOL before = _statusBarOverlaysWebView;
+    if (settingVal) {
+        BOOL fromPref = [(NSNumber*)settingVal boolValue];
+        if (before == NO && fromPref == YES) {
+            NSLog(@"[ANZ-SB] _ready RACE: pref resets overlays false→true");
+        }
+        self.statusBarOverlaysWebView = fromPref;
         if (self.statusBarOverlaysWebView) {
             [self resizeWebView];
         }
     }
 }
 
-- (void) initializeStatusBarBackgroundView
+/*
+ * ANZ 3.0.0-anz.1: UIApplication.statusBarFrame is often CGRectZero (deprecated).
+ * Prefer UIStatusBarManager, then max with view safeAreaInsets.top (Dynamic Island).
+ */
+- (CGRect)anz_statusBarFrame
 {
-    CGRect statusBarFrame = [UIApplication sharedApplication].statusBarFrame;
+    CGRect statusBarFrame = CGRectZero;
+    UIView *root = self.viewController.view;
+    CGFloat width = CGRectGetWidth(root.bounds);
+    if (width < 1.0) {
+        width = CGRectGetWidth([UIScreen mainScreen].bounds);
+    }
 
-    if ([[UIApplication sharedApplication]statusBarOrientation] == UIInterfaceOrientationPortraitUpsideDown &&
-        statusBarFrame.size.height + statusBarFrame.origin.y == [self.viewController.view.window bounds].size.height) {
+    if (@available(iOS 13.0, *)) {
+        UIWindow *window = root.window;
+        if (!window) {
+            for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+                if (![scene isKindOfClass:[UIWindowScene class]]) {
+                    continue;
+                }
+                UIWindowScene *windowScene = (UIWindowScene *)scene;
+                if (windowScene.activationState != UISceneActivationStateForegroundActive &&
+                    windowScene.activationState != UISceneActivationStateForegroundInactive) {
+                    continue;
+                }
+                window = windowScene.windows.firstObject;
+                if (window) {
+                    break;
+                }
+            }
+        }
+        UIStatusBarManager *manager = window.windowScene.statusBarManager;
+        if (manager && !manager.statusBarHidden) {
+            statusBarFrame = manager.statusBarFrame;
+        }
+    }
 
-        // When started in upside-down orientation on iOS 7, status bar will be bound to lower edge of the
-        // screen (statusBarFrame.origin.y will be somewhere around screen height). In this case we need to
-        // correct frame's coordinates
+    if (statusBarFrame.size.height < 1.0) {
+        statusBarFrame = [UIApplication sharedApplication].statusBarFrame;
+    }
+    if (@available(iOS 11.0, *)) {
+        CGFloat safeTop = root.safeAreaInsets.top;
+        if (safeTop > statusBarFrame.size.height) {
+            statusBarFrame = CGRectMake(0, 0, width, safeTop);
+        }
+    }
+    if (statusBarFrame.size.width < 1.0) {
+        statusBarFrame.size.width = width;
+    }
+
+    CGRect screenBounds = root.window ? root.window.bounds : [UIScreen mainScreen].bounds;
+    if (statusBarFrame.origin.y > 0 &&
+        statusBarFrame.size.height + statusBarFrame.origin.y >= CGRectGetHeight(screenBounds)) {
+        // Upside-down / bound-to-bottom quirk from stock plugin
         statusBarFrame.origin.y = 0;
     }
+
+    return statusBarFrame;
+}
+
+
+- (void) initializeStatusBarBackgroundView
+{
+    CGRect statusBarFrame = [self anz_statusBarFrame];
 
     _statusBarBackgroundView = [[UIView alloc] initWithFrame:statusBarFrame];
     _statusBarBackgroundView.backgroundColor = _statusBarBackgroundColor;
@@ -225,19 +284,16 @@ static const void *kStatusBarStyle = &kStatusBarStyle;
         return;
     }
 
+    NSLog(@"[ANZ-SB] overlays %d→%d", (int)_statusBarOverlaysWebView, (int)statusBarOverlaysWebView);
     _statusBarOverlaysWebView = statusBarOverlaysWebView;
 
     [self resizeWebView];
 
     if (statusBarOverlaysWebView) {
-
         [_statusBarBackgroundView removeFromSuperview];
-
     } else {
-
         [self initializeStatusBarBackgroundView];
-        [self.webView.superview addSubview:_statusBarBackgroundView];
-
+        [self anz_presentStatusBarBackgroundView];
     }
 
 }
@@ -342,7 +398,8 @@ static const void *kStatusBarStyle = &kStatusBarStyle;
     [scanner scanHexInt:&rgbValue];
 
     _statusBarBackgroundColor = [UIColor colorWithRed:((rgbValue & 0xFF0000) >> 16)/255.0 green:((rgbValue & 0xFF00) >> 8)/255.0 blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
-    _statusBarBackgroundView.backgroundColor = _statusBarBackgroundColor;
+    [self anz_presentStatusBarBackgroundView];
+    NSLog(@"[ANZ-SB] bgColor %@", hexString);
 }
 
 - (void) backgroundColorByHexString:(CDVInvokedUrlCommand*)command
@@ -428,10 +485,18 @@ static const void *kStatusBarStyle = &kStatusBarStyle;
 }
 
 -(void)resizeStatusBarBackgroundView {
-    CGRect statusBarFrame = [UIApplication sharedApplication].statusBarFrame;
+    if (_statusBarBackgroundView == nil) {
+        return;
+    }
+    CGRect statusBarFrame = [self anz_statusBarFrame];
     CGRect sbBgFrame = _statusBarBackgroundView.frame;
-    sbBgFrame.size = statusBarFrame.size;
+    sbBgFrame.origin = CGPointMake(0, 0);
+    sbBgFrame.size = CGSizeMake(MAX(statusBarFrame.size.width, self.viewController.view.bounds.size.width),
+                                statusBarFrame.size.height);
     _statusBarBackgroundView.frame = sbBgFrame;
+    if (_statusBarBackgroundColor) {
+        _statusBarBackgroundView.backgroundColor = _statusBarBackgroundColor;
+    }
 }
 
 -(void)resizeWebView
@@ -447,7 +512,7 @@ static const void *kStatusBarStyle = &kStatusBarStyle;
 
     self.webView.frame = bounds;
 
-    CGRect statusBarFrame = [UIApplication sharedApplication].statusBarFrame;
+    CGRect statusBarFrame = [self anz_statusBarFrame];
     CGRect frame = self.webView.frame;
     CGFloat height = statusBarFrame.size.height;
 
@@ -471,7 +536,26 @@ static const void *kStatusBarStyle = &kStatusBarStyle;
     }
     frame.size.height -= frame.origin.y;
     self.webView.frame = frame;
-    
+
+    [self anz_presentStatusBarBackgroundView];
+}
+
+- (void)anz_presentStatusBarBackgroundView
+{
+    if (_statusBarBackgroundColor) {
+        _statusBarBackgroundView.backgroundColor = _statusBarBackgroundColor;
+        if (!self.statusBarOverlaysWebView && self.viewController.view) {
+            self.viewController.view.backgroundColor = _statusBarBackgroundColor;
+        }
+    }
+    if (_statusBarBackgroundView == nil || self.statusBarOverlaysWebView || !_statusBarVisible) {
+        return;
+    }
+    [self resizeStatusBarBackgroundView];
+    if (_statusBarBackgroundView.superview == nil) {
+        [self.webView.superview addSubview:_statusBarBackgroundView];
+    }
+    [self.webView.superview bringSubviewToFront:_statusBarBackgroundView];
 }
 
 - (void) dealloc
